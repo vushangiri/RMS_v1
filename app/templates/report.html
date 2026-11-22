@@ -1,0 +1,196 @@
+{% from 'settings_forms.html' import product_actions with context %}
+{% from 'form_help.html' import help %}
+<section class="card section">
+    <div class="sectionhead">
+        <div>
+            {% if page != "settings" %}<div class="eyebrow">{{ "All dates through " ~ hi if args.get("period")=="all" else lo ~ " – " ~ hi }}</div>{% endif %}
+            <h2>{{ "Product catalogue" if page=="settings" else reports[key] }}</h2>
+        </div>
+        <div class="actions">
+            <a class="btn tiny" hx-boost="false" href="{{ export_url }}">Export CSV</a>
+            <a class="btn tiny" hx-boost="false" href="{{ print_url }}">Print</a>
+            {% if page=="counters" and key in money_reports %}
+                <a class="btn tiny" href="{{ url_for('ui.workspace',page='reports',report='cash_bank',day=day,period=args.get('period'),start=args.get('start'),end=args.get('end')) }}">Cash and bank</a>
+            {% endif %}
+            {{ report_actions|default("") }}
+        </div>
+    </div>
+    {% if page=="settings" %}
+        <div class="catalogue-tools">
+            <form class="toolbar" method="get">
+                <input type="hidden" name="day" value="{{ day }}">
+                <input class="search" type="search" name="q" aria-label="Search products" placeholder="Search products" value="{{ args.get('q','') }}">
+                <button class="btn">Search</button>
+                {% if args.get('q') %}<a class="btn" href="{{ url_for('ui.workspace',page=page,day=day) }}">Clear</a>{% endif %}
+            </form>
+            {{ help("product_search") }}
+        </div>
+    {% else %}
+        <form class="filters" method="get">
+            <input type="hidden" name="day" value="{{ day }}">
+            <div class="toolbar">
+                {% if page in ("reports","overview","income","money","stock","counters") %}
+                    <label class="field">
+                        Report<select name="report" data-auto>
+                        {% for k,v in reports.items() if page=='reports' or k in choices %}
+                            <option value="{{ k }}" {% if k==key %}selected{% endif %}>{{ v }}</option>
+                        {% endfor %}
+                        </select>
+                    </label>
+                {% else %}
+                    <input type="hidden" name="report" value="{{ key }}">
+                {% endif %}
+                <label class="field">
+                    Find records<input name="q" value="{{ args.get('q', '') }}" placeholder="Name, reference, amount…">
+                </label>
+                <label class="field">
+                    Period<select name="period" data-period>
+                    {% for k in ['daily','weekly','monthly','yearly','custom'] + (['all'] if key in money_reports else []) %}
+                        <option value="{{ k }}" {{ 'selected' if args.get('period', 'daily')==k }}>{{ 'All dates' if k=='all' else k|capitalize }}</option>
+                    {% endfor %}
+                    </select>
+                </label>
+                <div class="toolbar" data-range {% if args.get('period')!='custom' %}hidden{% endif %}>
+                    {{ field('Start','start','date',default=args.get('start',lo)) }}{{ field('End','end','date',default=args.get('end',hi)) }}
+                </div>
+                {% if key in money_reports %}
+                    <label class="field">
+                        Account<select name="account" aria-label="Account">
+                            <option value="">All accounts</option>
+                            {% for a in history_accounts if a.kind==key or (key=='cash_bank' and a.kind in ('cash','bank')) %}
+                                <option value="{{ a.id }}" {{ 'selected' if args.get('account')==a.id|string }}>{{ a.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                {% endif %}
+                {% if key in money_reports %}
+                    <label class="field">Direction
+                        <select name="direction" aria-label="Direction">
+                            {% for value,label in [('', 'In and out'),('in','Money in'),('out','Money out')] %}
+                                <option value="{{ value }}" {{ 'selected' if args.get('direction','')==value }}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                {% endif %}
+                {% if page=="reports" %}
+                    <label class="field">
+                        Counter<select name="counter">
+                        <option value="">All counters</option>
+                        {% for c in counters %}
+                            <option value="{{ c.id }}" {{ 'selected' if args.get("counter")==c.id|string}}>
+                                {{ c.name }}
+                            </option>
+                        {% endfor %}
+                        </select>
+                    </label>
+                {% else %}
+                    <input type="hidden" name="counter" value="{{ args.get('counter', '') }}">
+                {% endif %}
+            </div>
+            {% if page in ("reports","expenses","credits","income") %}
+                <details class="extra">
+                    <summary>More filters</summary>
+                    <div class="formgrid">
+                        {{ field('Supplier or customer','party',default=args.get('party',''),list='party-names') }}{{ select('Payment method on record','method',[('','All'),('cash','Cash'),('bank','Bank'),('payable','Supplier credit'),('receivable','Customer credit')],args.get('method','')) }}
+                        {% if key in ("purchases","sold") %}{{ field('Item','item',default=args.get('item',''),list='items') }}{{ field('Category','category',default=args.get('category',''),list='categories') }}
+                        {% endif %}
+                    </div>
+                </details>
+            {% endif %}
+            <div class="toolbar">
+                <button class="btn tiny">Apply</button>
+                <a href="{{ url_for('ui.workspace',page=page,day=day,report=key) }}" class="btn tiny">Reset</a>
+                {{ help("report_filters") }}
+            </div>
+        </form>
+    {% endif %}
+    {% if key=="register" %}
+        <p class="muted">Moved is the sum of transfer amounts on each record. Sales and purchases have separate reports.</p>
+    {% elif key in ("payable","receivable") %}
+        <p class="muted">Balances include earlier bills and settlements through {{ hi }}.</p>
+    {% elif key=="stock" %}
+        <p class="muted">Restaurant-wide estimates include recorded purchases, depletion and approved adjustments.</p>
+    {% endif %}
+    {% if data %}
+        <div class="tablewrap">
+            <table>
+                <thead>
+                    <tr>
+                        {% for col in data[0].keys() %}
+                            <th>{{ col|replace('_', ' ') }}</th>
+                        {% endfor %}
+                        {% if page in ("credits","settings") %}
+                            <th>Actions</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in data %}
+                        <tr>
+                            {% for col,v in row.items() %}
+                                <td>
+                                    {% if col=="record" %}
+                                        <a href="/record/{{ v }}">#{{ v }}</a>
+                                    {% elif col=="party" and page=="credits" %}
+                                        <a href="{{ url_for('ui.credit_account',kind=key,party=v,day=day) }}">{{ v }}</a>
+                                    {% elif col=="kind" and key in money_reports %}{{ v|replace('_', ' ')|capitalize }}
+                                    {% elif col=="estimated" and page=="stock" %}
+                                        <span class="stock-quantity {{ 'stock-empty' if v==0 }}">{{ v }} {{ row.unit }}</span>
+                                    {% elif col in ('money_in','money_out','change') and key in money_reports %}{{ '{:,.2f}'.format(v) }}
+                                    {% else %}{{ v if v!=none else '—' }}
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                            {% if page=="settings" %}
+                                <td>{{ product_actions(items_by_name[row.item]) }}</td>
+                            {% elif page=="credits" %}
+                                <td>
+                                    <a class="btn tiny" href="{{ url_for('ui.credit_account',kind=key,party=row.party,credit=row.record,day=day) }}">History</a>
+                                    {% if row.outstanding>0 %}
+                                        <button class="btn tiny"
+                                                data-settle="{{ row.record }}"
+                                                data-balance="{{ row.outstanding }}">
+                                            {{'Record payment' if key=='payable' else 'Record collection'}}
+                                        </button>
+                                    {% endif %}
+                                </td>
+                            {% endif %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="empty">No matching records.</p>
+    {% endif %}
+    {% if pg>1 or more %}
+    <nav class="toolbar table-pager" aria-label="Report pages">
+        {% if pg>1 %}
+            <a href="{{ link(page=pg-1) }}">Previous</a>
+        {% endif %}
+        <span>Page {{ pg }}</span>
+        {% if more %}
+            <a href="{{ link(page=pg+1) }}">Next</a>
+        {% endif %}
+    </nav>
+    {% endif %}
+</section>
+{% if page=="credits" %}
+    <dialog id="settle">
+        <h2>{{'Record payment' if key=='payable' else 'Record collection'}}</h2>
+        <form action="/entry" method="post" class="stack entryform" hx-boost="false">
+            <input type="hidden" name="origin">
+            <input type="hidden" name="token" value="{{ uuid() }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="page" value="credits">
+            <input type="hidden" name="kind" value="{{'payment' if key=='payable' else 'collection'}}">
+            <input type="hidden" name="day" value="{{ day }}">
+            {{ counter() }}{{ account() }}{{ field('Amount','amount','number',true) }}
+            {{ help("settlement") }}
+            <div class="toolbar">
+                <button class="btn primary">Save</button>
+                <button type="button" data-dismiss class="btn">Cancel</button>
+            </div>
+        </form>
+    </dialog>
+{% endif %}

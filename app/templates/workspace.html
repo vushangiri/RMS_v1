@@ -1,0 +1,371 @@
+{% extends "base.html" %}
+{% from 'forms.html' import form,field,select,counter,account,itemrow,allocation,stock_item with context %}
+{% block content %}
+    <datalist id="items">
+        {% for i in items if i.active %}
+            <option value="{{ i.name }}"
+                    data-unit="{{ i.unit }}"
+                    data-category="{{ i.category }}"
+                    data-tracked="{{ 1 if i.tracked else 0 }}">{{ i.unit }}</option>
+        {% endfor %}
+    </datalist>
+    {% if page in ('counters', 'stock') %}
+        {% set picker_items = items|selectattr('active')|list %}
+        {% if page=='stock' %}{% set picker_items = picker_items|selectattr('tracked')|list %}{% endif %}
+        <dialog id="item-picker" class="entry-dialog" aria-labelledby="item-picker-title">
+            <div class="sectionhead">
+                <h2 id="item-picker-title">Choose an item</h2>
+                <button type="button" class="icon-button" data-dismiss aria-label="Close item picker">×</button>
+            </div>
+            <div class="formgrid">
+                <label class="field">Search items<input type="search" data-item-search autofocus></label>
+                <label class="field">Category
+                    <select data-item-category>
+                        <option value="">All categories</option>
+                        {% for category in picker_items|map(attribute='category')|unique|sort %}
+                            <option>{{ category }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+            <div class="item-picker-grid section">
+                {% for item in picker_items %}
+                    <button type="button" class="btn item-choice" data-item-name="{{ item.name }}" data-item-category="{{ item.category }}">
+                        <strong>{{ item.name }}</strong><small>{{ item.category }} · {{ item.unit }}</small>
+                    </button>
+                {% endfor %}
+            </div>
+            <p data-item-empty hidden>No matching catalogue items.</p>
+            {% if page == 'counters' %}
+                <button type="button" class="btn" data-custom-item>Enter an item manually</button>
+            {% endif %}
+        </dialog>
+    {% endif %}
+    <datalist id="stockitems">
+        {% for i in items if i.active and i.tracked %}
+            <option value="{{ i.name }}" data-unit="{{ i.unit }}">{{ i.unit }}</option>
+        {% endfor %}
+    </datalist>
+    <datalist id="categories">
+        {% for name in categories %}
+            <option>{{ name }}</option>
+        {% endfor %}
+    </datalist>
+    <datalist id="units">
+        {% for unit in units %}<option value="{{ unit }}">{% endfor %}
+    </datalist>
+    {% if page=="settings" %}
+        <datalist id="product-names">
+            {% for name in product_names %}<option value="{{ name }}">{% endfor %}
+        </datalist>
+    {% endif %}
+    {% if related_counts %}
+        <datalist id="related-counts">
+            {% for count in related_counts %}<option value="{{ count.id }}">{{ count.name }} · {{ count.variance }}</option>{% endfor %}
+        </datalist>
+    {% endif %}
+    {% if parties %}
+        <datalist id="party-names">
+            {% for name in parties.values()|sum(start=[])|unique %}<option value="{{ name }}">{% endfor %}
+        </datalist>
+    {% endif %}
+    {% for kind, names in parties.items() %}
+        <datalist id="{{ kind }}-names">
+            {% for name in names %}<option value="{{ name }}">{% endfor %}
+        </datalist>
+    {% endfor %}
+    {% if page in ("expenses","income","counters") %}
+        <div class="tabs">
+            <a class="{{ 'active' if not args.get('counter') }}" href="{{ link(counter='',account='',page=1) }}">All counters</a>
+            {% for c in counters if c.active %}
+                <a class="{{ 'active' if args.get('counter')==c.id|string}}" href="{{ link(counter=c.id,account='',page=1) }}">
+                    {{ c.name }}
+                </a>
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% if page in ("overview","counters") %}
+        <div class="card metric-strip four">
+            {% set metrics = [('sales','Sales','Cash, bank and credit'),('purchases','Expenses','New bills recorded')] %}
+            {% set metrics = metrics + ([('expected','Cash on hand','Across all counters'),('net_activity','Sales less expenses','Recorded activity')] if page=='overview' else [('cash_change','Cash change','Net drawer movements'),('bank_change','Bank change','Net bank movements')]) %}
+            {% for metric,label,note in metrics %}
+                <div class="metric">
+                    <div class="label">{{ label }}</div>
+                    <div class="num">रु {{ '{:,.2f}'.format(totals[metric]) }}</div>
+                    <div class="note">{{ note }}</div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% if page=="overview" %}
+        <div class="overview-layout section">
+            {% include "overview_chart.html" %}
+            <section class="card">
+                <div class="sectionhead"><h2>Quick actions</h2><span class="tag">{{ 'Day closed' if closed else 'Day open' }}</span></div>
+                <div class="quick-actions">
+                    {% if not closed %}
+                        <a class="btn primary" href="{{ url_for('ui.workspace',page='counters',day=day,add='sale') }}">↗ Record income</a>
+                        <a class="btn" href="{{ url_for('ui.workspace',page='counters',day=day,add='bill') }}">↘ New expense</a>
+                    {% endif %}
+                    <a class="btn" href="{{ url_for('ui.workspace',page='money',day=day,add='transfer') }}">⇄ Move money</a>
+                    <a class="btn" href="{{ url_for('ui.workspace',page='credits',day=day) }}">Credit balances</a>
+                    <a class="btn" href="{{ url_for('ui.workspace',page='stock',day=day) }}">Stock control</a>
+                    <a class="btn" href="{{ url_for('ui.workspace',page='counters',day=day,add='review') }}">Review daily closing</a>
+                </div>
+            </section>
+        </div>
+        <form method="get" action="/search" class="card toolbar section">
+            <input type="hidden" name="end" value="{{ day }}">
+            <input class="search grow" name="q" aria-label="Global search" placeholder="Search all records through this date">
+            <button class="btn">Search</button>
+        </form>
+    {% endif %}
+    {% if page=="counters" %}
+        {% if not closed %}{% include "counter_trade.html" %}{% endif %}
+        <div class="toolbar workspace-actions">
+            {% if not closed %}
+            {% call form('opening','Set opening cash') %}
+                <div class="formgrid">
+                    {{ account('Drawer',cash=true) }}{{ field('Opening balance','amount','number',true) }}{{ field('Reason','reason','text',true) }}
+                </div>
+            {% endcall %}
+            {% call form('transfer','Transfer cash') %}
+                <input type="hidden" name="scope" value="cash">
+                <div class="formgrid">
+                    {{ account('From drawer', 'account_id',cash=true) }}{{ account('To drawer', 'to_id',cash=true) }}{{ field('Amount','amount','number',true) }}
+                </div>
+            {% endcall %}
+            {% call form('handover','Count cash and settle counter','settle_counter') %}
+                <div class="formgrid">
+                    <label class="field">Counter
+                        <select name="counter_id" required>
+                            {% set pending_subordinates = counters|selectattr('active')|rejectattr('main')|selectattr('actual', 'none')|list %}
+                            {% for c in counters|sort(attribute='main') if c.active and c.actual is none %}
+                                <option value="{{ c.id }}" data-expected="{{ c.expected }}" {% if c.main and (pending_subordinates or handovers) %}disabled{% elif c.id|string == args.get('counter') %}selected{% endif %}>{{ c.name }}</option>
+                            {% else %}
+                                <option value="">All counters counted</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    {{ field('Actual cash','actual','number',true) }}
+                </div>
+                <output data-cash-variance aria-live="polite"></output>
+                <label class="field">Variance notes<textarea name="reason" rows="2"></textarea></label>
+            {% endcall %}
+            {% call form('adjustment','Adjust drawer balance') %}
+                <div class="formgrid">
+                    {{ account('Drawer',cash=true) }}{{ field('Signed change','amount','number',true) }}{{ field('Reason','reason','text',true) }}
+                </div>
+            {% endcall %}
+            {% endif %}
+            {% if closed %}<a class="btn primary" href="{{ url_for('ui.record',e=closed) }}">View saved closing</a>{% endif %}
+            <button type="button" data-dialog="closing-review" class="btn" aria-haspopup="dialog">Review closing</button>
+            <dialog class="entry-dialog" id="closing-review" aria-labelledby="closing-review-title" {% if args.get('add')=='review' %}data-open{% endif %}>
+                <div class="sectionhead"><h2 id="closing-review-title">Closing review · {{ day }}</h2><button type="button" class="icon-button" data-dismiss aria-label="Close">×</button></div>
+                <div class="grid two section">
+                    {% for title,records in preview.items() %}
+                        <section class="soft">
+                            <h3>{{ title }}</h3>
+                            {% if records %}
+                                <div class="tablewrap" data-paginate>
+                                    <table>
+                                        <tr>
+                                            {% for k in records[0] %}
+                                                <th>{{ k }}</th>
+                                            {% endfor %}
+                                        </tr>
+                                        {% for r in records %}
+                                            <tr>
+                                                {% for v in r.values() %}
+                                                    <td>{{ v if v!=none else '—' }}</td>
+                                                {% endfor %}
+                                            </tr>
+                                        {% endfor %}
+                                    </table>
+                                </div>
+
+                            {% else %}
+                                <p>No entries.</p>
+                            {% endif %}
+                        </section>
+                    {% endfor %}
+                </div>
+            </dialog>
+            {% if not closed %}
+                {% call form('close','Finalize day',primary=true) %}
+                    {{ field('Closing notes', 'reason') }}
+                {% endcall %}
+            {% endif %}
+        </div>
+        <div class="grid two section">
+            {% for c in counters if c.active and (not args.get('counter') or args.get('counter')==c.id|string) %}
+                <section class="card">
+                    <div class="sectionhead">
+                        <h2>{{ c.name }}</h2>
+                        <span class="tag {{'green' if c.actual!=none else 'orange'}}">
+                            {{'Counted' if c.actual!=none else 'Awaiting count'}}
+                        </span>
+                    </div>
+                    <div class="counter-shortcuts toolbar">
+                        {% if not closed %}
+                            <button class="btn tiny income-action" type="button" data-dialog="entry-sale" data-counter="{{ c.id }}" aria-haspopup="dialog"><span aria-hidden="true">↗</span> Income</button>
+                            <button class="btn tiny expense-action" type="button" data-dialog="entry-bill" data-counter="{{ c.id }}" aria-haspopup="dialog"><span aria-hidden="true">↘</span> Expense</button>
+                        {% endif %}
+                        <a class="btn tiny" href="{{ url_for('ui.workspace',page='expenses',day=day,counter=c.id) }}">View expenses</a>
+                        <a class="btn tiny" href="{{ url_for('ui.workspace',page='income',day=day,counter=c.id) }}">View income</a>
+                    </div>
+                    {% for k,v in [('opening','Opening cash'),('inflows','Cash in'),('outflows','Cash out'),('expected','Drawer balance'),('counted_expected','Expected at count'),('actual','Counted cash'),('variance','Difference')] %}
+                        <div class="row stat">
+                            <span>{{ v }}</span>
+                            <b>
+                                {{ c[k] if c[k]!=none else '—' }}
+                            </b>
+                        </div>
+                    {% endfor %}
+                    {% for kind, title in [('collection', 'Receivables collected'), ('payment', 'Payables paid')] %}
+                        {% set entries = settlements.get(c.id, {}).get(kind, []) %}
+                        <details class="settlement-detail">
+                            <summary>{{ title }} · NPR {{ '{:,.2f}'.format(entries|sum(attribute='amount')) }}</summary>
+                            {% if entries %}
+                                <div class="tablewrap" data-paginate>
+                                    <table>
+                                        <thead><tr><th>Party</th><th>Account</th><th>Amount (NPR)</th><th>Record</th></tr></thead>
+                                        <tbody>
+                                            {% for entry in entries %}
+                                                <tr><td>{{ entry.party }}</td><td>{{ entry.account }}</td><td>{{ entry.amount }}</td>
+                                                    <td><a href="{{ url_for('ui.record',e=entry.id) }}">#{{ entry.id }}</a></td></tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <p>No transactions for this counter on {{ day }}.</p>
+                            {% endif %}
+                        </details>
+                    {% endfor %}
+                </section>
+            {% endfor %}
+        </div>
+        {% if closed or handovers %}
+        <details class="card section advanced-actions" {% if handovers and not closed %}open{% endif %}>
+            <summary>Advanced drawer actions{% if handovers %} · {{ handovers|length }} pending receipt{{ 's' if handovers|length != 1 }}{% endif %}</summary>
+            <div class="toolbar">
+                {% if closed %}
+                    {% call form('reopen','Reopen finalized day') %}
+                        {{ field('Reason for reopening','reason','text',true) }}
+                    {% endcall %}
+                {% endif %}
+                {% if handovers %}
+                    {% call form('receive','Confirm later receipt by Main') %}
+                        <label class="field">Pending handover
+                            <select name="origin" required>
+                                {% for h in handovers %}<option value="{{ h.id }}">#{{ h.id }} · {{ h.name }} · {{ h.day }}</option>{% endfor %}
+                            </select>
+                        </label>
+                        {{ field('Additional cash received','amount','number',true) }}
+                    {% endcall %}
+                {% endif %}
+            </div>
+        </details>
+        {% endif %}
+    {% elif page=="money" %}
+        <div class="grid two">
+            {% for kind,title in [('cash','Cash drawers'),('bank','Bank accounts')] %}
+                <section class="card balance-card">
+                    <div class="sectionhead"><h2>{{ title }}</h2><a href="{{ link(report=kind,account='',page=1) }}">View transactions</a></div>
+                    {% for a in accounts if a.active and a.kind==kind %}
+                        <div class="row stat"><a href="{{ link(report=kind,account=a.id,page=1) }}">{{ a.name }}</a><b>रु {{ '{:,.2f}'.format(a.balance) }}</b></div>
+                    {% else %}
+                        <p class="muted">No active accounts.</p>
+                    {% endfor %}
+                </section>
+            {% endfor %}
+        </div>
+        <div class="toolbar workspace-actions">
+            {% call form('transfer','Transfer money',open=args.get('add')=='transfer',primary=true) %}
+                <div class="formgrid">
+                    {{ account('From', 'account_id') }}{{ account('To', 'to_id') }}{{ field('Amount','amount','number',true) }}{{ field('Reference', 'reference') }}
+                </div>
+            {% endcall %}
+            {% for k,title in [('opening','Set opening bank balance'),('adjustment','Adjust bank balance'),('bank_count','Reconcile bank statement')] %}
+                {% call form(k,title) %}
+                    <div class="formgrid">
+                        {{ account('Bank account',bank=true) }}{{ field('Statement balance' if k=='bank_count' else 'Amount (signed for adjustments)','actual' if k=='bank_count' else 'amount','number',true) }}
+                        {% if k=="adjustment" %}{{ field('Count record # (for variance approval)','origin','number',list='related-counts',step='1') }}
+                        {% endif %}{{ field('Reason or reference','reason','text',true) }}
+                    </div>
+                {% endcall %}
+            {% endfor %}
+        </div>
+    {% elif page=="credits" %}
+        <div class="card metric-strip two">
+            {% for k,v in credit_totals.items() %}
+                <div class="metric">
+                    <div class="label">Outstanding {{ k }}s</div>
+                    <div class="num">रु {{ '{:,.2f}'.format(v) }}</div>
+                    <div class="note">Restaurant balance through {{ day }}</div>
+                </div>
+            {% endfor %}
+        </div>
+        <div class="tabs">
+            <a href="{{ link(report='payable',page=1) }}" class="{{'active' if key=='payable'}}">Supplier payables</a>
+            <a href="{{ link(report='receivable',page=1) }}"
+               class="{{'active' if key=='receivable'}}">Customer receivables</a>
+        </div>
+        <div class="toolbar workspace-actions">
+            {% set names = parties.get('customer' if key=='receivable' else 'supplier', []) %}
+            {% if names %}
+                <form class="toolbar" method="get" action="{{ url_for('ui.credit_account',kind=key) }}">
+                    <input type="hidden" name="day" value="{{ day }}">
+                    <label class="field">
+                        Account history<select name="party" required>
+                            <option value="">{{ 'Choose a customer' if key=='receivable' else 'Choose a supplier' }}</option>
+                            {% for name in names %}<option {{ 'selected' if name==args.get('party') }}>{{ name }}</option>{% endfor %}
+                        </select>
+                    </label>
+                    <button class="btn">View history</button>
+                </form>
+            {% endif %}
+            {% call form('opening_credit','Add historical credit balance') %}
+                <div class="formgrid">
+                    {{ counter() }}{{ select('Balance type', 'credit_type', [('payable', 'Supplier payable'), ('receivable', 'Customer receivable')],key) }}{{ field('Supplier or customer','party','text',true,list='customer-names' if key=='receivable' else 'supplier-names') }}{{ field('Amount','amount','number',true) }}{{ field('Reason','reason','text',true) }}
+                </div>
+            {% endcall %}
+        </div>
+    {% elif page=="stock" %}
+        <section class="card stock-header">
+            <div class="sectionhead"><h2>Inventory at a glance</h2><span class="tag {{ 'green' if physical }}">Physical counts {{ 'on' if physical else 'off' }}</span></div>
+            <div class="stock-metrics">
+                {% for label,total,style in [('Tracked products',stock_summary.tracked,''),('Out of stock',stock_summary.empty,'warning'),('Counted on ' ~ day.strftime('%d %b'),stock_summary.counted,'')] %}
+                    <div class="metric {{ style }}"><div class="label">{{ label }}</div><div class="num">{{ total }}</div></div>
+                {% endfor %}
+            </div>
+        </section>
+        <div class="toolbar workspace-actions">
+            {% if physical %}
+                {% call form('stock_count','Record physical stock count',primary=true) %}
+                    <div class="formgrid">
+                        {{ stock_item() }}{{ field('Actual quantity','actual','number',true,step='0.001') }}{{ field('Notes', 'reason') }}
+                        <input type="hidden" name="apply_count" value="on">
+                    </div>
+                    <output class="muted" data-stock-unit></output>
+                {% endcall %}
+            {% endif %}
+            {% call form('stock_adjust','Set opening stock','opening_stock',primary=not physical) %}
+                <div class="formgrid">
+                    {{ stock_item() }}{{ field('Opening quantity','qty','number',true,step='0.001') }}{{ field('Reason','reason','text',true) }}
+                </div>
+                <output class="muted" data-stock-unit></output>
+            {% endcall %}
+            {% call form('stock_adjust','Adjust stock') %}
+                <div class="formgrid">
+                    {{ stock_item() }}{{ field('Signed change in base units','qty','number',step='0.001') }}{{ field('Or approve variance from count #','origin','number',list='related-counts',step='1') }}{{ field('Reason','reason','text',true) }}
+                </div>
+                <output class="muted" data-stock-unit></output>
+            {% endcall %}
+        </div>
+    {% elif page=="settings" %}
+        {% include "settings.html" %}
+    {% endif %}
+    {% if page not in ("settings","overview") %}{% include "report.html" %}{% endif %}
+{% endblock %}

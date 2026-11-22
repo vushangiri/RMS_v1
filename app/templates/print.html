@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>{{ title }} · RMS</title>
+        <link rel="stylesheet" href="/static/app.css?v=6">
+        <script src="/static/app.js?v=6" defer></script>
+    </head>
+    <body>
+        <main class="main">
+            <div class="eyebrow">RMS · Restaurant management</div>
+            <h1>{{ title }}</h1>
+            <p>{{ "All dates through " ~ hi if lo.year==1 else lo ~ " – " ~ hi }} · NPR</p>
+            <div class="toolbar">
+                <button class="btn" data-print>Print report</button>
+                <a href="/">Overview</a>
+            </div>
+            {% if data %}
+                <div class="tablewrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                {% for k in data[0] %}
+                                    <th>{{ k }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in data %}
+                                <tr>
+                                    {% for v in r.values() %}
+                                        <td>{{ v if v!=none else '—' }}</td>
+                                    {% endfor %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p>No matching records.</p>
+            {% endif %}
+        </main>
+    </body>
+</html>

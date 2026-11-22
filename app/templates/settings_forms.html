@@ -1,0 +1,56 @@
+{% from 'forms.html' import select with context %}
+{% from 'forms.html' import account, field, form with context %}
+{% macro product_fields(item=none) %}
+    {% set product_name = item.name.removesuffix(' · ' ~ item.variation) if item and item.variation else (item.name if item else '') %}
+    <div class="formgrid">
+        {{ field('Product name','name','text',true,default=product_name,list='product-names',maxlength=120) }}
+        {{ field('Variation (optional)','variation',default=item.variation if item else '',maxlength=80) }}
+        {{ field('Category','category','text',true,default=item.category if item else '',list='categories',maxlength=80) }}
+        {{ field('Base unit','unit','text',true,default=item.unit if item else '',list='units',maxlength=20) }}
+    </div>
+    <label class="toggle">
+        <input type="checkbox" name="tracked" {% if item and item.tracked %}checked{% endif %}>
+        Track stock for this product
+    </label>
+{% endmacro %}
+
+{% macro variant_row() %}
+    <div class="soft stack" data-variant-row>
+        <div class="formgrid">
+            {{ field('Variation (optional)','variant_variation',maxlength=80) }}
+            {{ field('Base unit','variant_unit','text',true,list='units',maxlength=20) }}
+            {{ select('Track stock','variant_tracked',[('off','No'),('on','Yes')]) }}
+        </div>
+        <button type="button" class="btn tiny" data-remove-variant hidden>Remove variation</button>
+    </div>
+{% endmacro %}
+
+{% macro product_actions(item) %}
+    {% set suffix = '-' ~ item.id %}
+    <div class="row-actions">
+        {% call form('configuration','Edit','edit_item',suffix=suffix,compact=true) %}
+            <input type="hidden" name="item_id" value="{{ item.id }}">
+            {{ product_fields(item) }}
+        {% endcall %}
+        {% call form('configuration','Archive' if item.active else 'Restore','toggle_item',suffix=suffix,compact=true) %}
+            <input type="hidden" name="item_id" value="{{ item.id }}">
+            <input type="hidden" name="active" value="{{ 'off' if item.active else 'on' }}">
+            <p>{{ 'Archive' if item.active else 'Restore' }} <strong>{{ item.name }}</strong>?</p>
+        {% endcall %}
+    </div>
+{% endmacro %}
+
+{% macro bank_actions(bank) %}
+    {% set suffix = '-' ~ bank.id %}
+    <div class="row-actions">
+        {% call form('configuration','Edit','edit_bank',suffix=suffix,compact=true) %}
+            <input type="hidden" name="bank_id" value="{{ bank.id }}">
+            {{ field('Account name','name','text',true,default=bank.name,maxlength=100) }}
+        {% endcall %}
+        {% call form('configuration','Archive' if bank.active else 'Restore','toggle_bank',suffix=suffix,compact=true) %}
+            <input type="hidden" name="bank_id" value="{{ bank.id }}">
+            <input type="hidden" name="active" value="{{ 'off' if bank.active else 'on' }}">
+            <p>{{ 'Archive' if bank.active else 'Restore' }} <strong>{{ bank.name }}</strong>?</p>
+        {% endcall %}
+    </div>
+{% endmacro %}

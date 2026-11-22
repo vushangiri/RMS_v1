@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>Sign in · RMS</title>
+        <link rel="stylesheet" href="/static/app.css?v=6">
+    </head>
+    <body class="sign">
+        <main class="card">
+            <div class="eyebrow">Restaurant management</div>
+            <h1>Sign in to RMS</h1>
+            {% if error %}
+                <p role="alert">{{ error }}</p>
+            {% endif %}
+            <form class="stack" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label class="field">
+                    Username<input name="username" required autocomplete="username">
+                </label>
+                <label class="field">
+                    Password<input type="password" name="password" required autocomplete="current-password">
+                </label>
+                <button class="btn primary">Sign in</button>
+            </form>
+        </main>
+    </body>
+</html>

@@ -1,0 +1,25 @@
+name: RMS validation
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: rms_test
+          POSTGRES_PASSWORD: test
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      SECRET_KEY: ephemeral-ci-only-secret-key-1234567890
+      COOKIE_SECURE: "0"
+      DATABASE_URL: postgresql+psycopg://postgres:test@localhost:5432/rms_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install -r requirements-dev.txt
+      - run: python -m playwright install --with-deps chromium
+      - run: alembic upgrade head && ruff check . && mypy app && pytest -q
+      - run: sh scripts/configure.sh && docker compose up -d --build --wait && curl --fail http://127.0.0.1:8080/health

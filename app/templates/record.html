@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% from "form_help.html" import help %}
+{% block title %}{{ r.kind|capitalize }} · #{{ r.id }}
+{% endblock %}
+{% block content %}
+    <section class="card">
+        <div class="eyebrow">{{ r.day }} · {{ r.username }}</div>
+        <h2>{{ r.counter or 'Restaurant' }}</h2>
+        <p>{{ r.party or '' }} {{ r.reference }} {{ r.reason }}</p>
+        {% if r.origin %}
+            <p>
+                Originating record <a href="/record/{{ r.origin }}">#{{ r.origin }}</a>
+            </p>
+        {% endif %}
+        {% if r.attachment %}
+            <a href="/receipt/{{ r.id }}" hx-boost="false">View receipt</a>
+        {% endif %}
+        {% for x in related %}
+            <p>
+                <a href="/record/{{ x.id }}">{{ x.kind }} #{{ x.id }}</a> · {{ x.day }}
+            </p>
+        {% endfor %}
+    </section>
+    {% for title,records in [('Money movements',movements),('Item lines',lines),('Count',observations)] + (snapshot.items()|list if snapshot else []) %}
+        {% if records %}
+            <section class="section card">
+                <h2>{{ title|capitalize }}</h2>
+                <div class="tablewrap" data-paginate>
+                    <table>
+                        <tr>
+                            {% for col in records[0] %}
+                                <th>{{ col }}</th>
+                            {% endfor %}
+                        </tr>
+                        {% for row in records %}
+                            <tr>
+                                {% for v in row.values() %}
+                                    <td>{{ v if v!=none else '—' }}</td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            </section>
+        {% endif %}
+    {% endfor %}
+    {% if source %}
+        <details class="card entry">
+            <summary>Original entry</summary>
+            <pre>
+{{source|tojson(indent=2)}}
+</pre>
+        </details>
+    {% endif %}
+    {% if r.kind not in ("reversal","configuration","close","reopen") %}
+        <details class="card entry">
+            <summary>Correct this record</summary>
+            <form method="post" action="/entry" hx-boost="false" class="entryform stack">
+                <input type="hidden" name="token" value="{{ uuid() }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="kind" value="reversal">
+                <input type="hidden" name="origin" value="{{ r.id }}">
+                <input type="hidden" name="day" value="{{ r.day }}">
+                <label class="field">
+                    Reason for reversal<input name="reason" required>
+                </label>
+                {{ help("reversal") }}
+                <button class="btn danger">Post reversal</button>
+            </form>
+        </details>
+    {% endif %}
+{% endblock %}

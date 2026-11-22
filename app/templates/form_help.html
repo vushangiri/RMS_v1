@@ -1,0 +1,39 @@
+{% macro help(kind) %}
+    {% set instructions = {
+        'report_filters': 'Choose the report and period. Find records searches the visible report by name or reference. More filters narrow the results by the relevant party, product, category or payment method.',
+        'product_search': 'Search catalogue entries by product, variation, category or unit. Archived entries remain available here.',
+        'global_search': 'Search for an item, party, counter, reference, date or amount. The end date limits the records searched.',
+        'bill': 'Counter is the drawer used for cash payments. Supplier is required for unpaid amounts. Reference and image identify the bill. Amount is the total for each item line. Quantity and unit update tracked stock. Choose a payment method and enter the portions already paid if the payment is split.',
+        'sale': 'Counter receives cash sales. Enter one bank and amount per bank and one customer and amount per credit customer. Leave unused rows empty. Quantities sold update tracked stock and quantities reports once for the whole batch.',
+        'transfer': 'From loses cash or bank balance and To receives it. Amount is the money moved. Reference is optional. This does not record a sale or expense.',
+        'settle_counter': 'Count subordinate drawers first. Saving a subordinate count records the full amount as transferred to Main. Use variance notes to explain any difference from expected cash. Count Main after receiving the other drawers.',
+        'receive': 'Choose the original handover and enter the amount Main has since received. The amount moves from cash in transit to Main.',
+        'close': 'Finalize after each active drawer has a cash count and Main has received outstanding handovers. Closing carries retained cash forward. Closing notes are saved in the audit log. Stock counts are optional.',
+        'reopen': 'Give the reason to reopen the latest finalized day. Its saved closing remains in history. Reopening reverses the cash closing adjustment so the day can be corrected and finalized again.',
+        'opening': 'Pick the drawer or bank, enter its starting balance, and explain where that balance came from. Use this once for setup. Later differences use an adjustment.',
+        'adjustment': 'Choose the affected account and enter a signed change, such as -20 to reduce the balance. Give a reason. If approving a count, use its record number and exact difference.',
+        'bank_count': 'Choose the bank and enter the statement balance as of this operating date. Explain differences. Reconciling records the comparison without moving money.',
+        'opening_credit': 'Choose payable for a supplier or receivable for a customer. Enter the existing amount and explain the source. The counter identifies who recorded it.',
+        'stock_count': 'Choose a tracked product and enter the amount physically counted in its base unit. The live estimate is updated to the count, and later movements build on it. Use the date the stock was counted. Notes can explain differences.',
+        'opening_stock': 'Choose a tracked product with no activity and enter its starting quantity in the catalogue unit. Record why you entered the opening amount.',
+        'stock_adjust': 'Choose a tracked product and enter a signed quantity in its base unit. Give a reason such as waste or a stock correction. A prior count can be approved by record number if it did not already update stock.',
+        'settlement': 'Choose the counter recording this settlement, the receiving or paying account, and the amount. It reduces the selected credit balance.',
+        'reversal': 'Explain why this entry needs correction. A reversal records the opposite ledger effect on the original date.',
+        'new_item': 'Enter the product name and category once. Add a row for each variation, with its own base unit and stock tracking. For a product without variations, leave the variation name blank.',
+        'edit_item': 'Change the name, variation or category. Base unit and stock tracking are protected where existing records depend on them. Each variation has its own balance.',
+        'toggle_item': 'Archiving removes the product from suggestions and day-to-day entry. Its history remains available. Restore it to use it again.',
+        'new_bank': 'Use a distinct account name so operators can find it when recording sales, payments or transfers. Enter an opening balance from Banking if needed.',
+        'edit_bank': 'Enter the name operators should see when selecting this account. Existing entries stay attached to the same account.',
+        'toggle_bank': 'Archiving hides an empty account from entry forms while retaining history. Move any remaining balance before archiving. Restore it to start using it again.',
+        'new_counter': 'Enter a short display name. RMS creates a cash drawer for the counter.',
+        'rename': 'Choose the counter to rename. Its cash drawer label is updated as well.',
+        'toggle_counter': 'Choose a non-Main counter. An empty drawer can be deactivated and brought back later.',
+        'physical': 'Choose whether operators can enter optional stock counts. Recorded purchases, sales and adjustments continue to update estimates.'
+    } %}
+    {% if instructions.get(kind) %}
+        <details class="form-help">
+            <summary>Learn more</summary>
+            <p>{{ instructions[kind] }}</p>
+        </details>
+    {% endif %}
+{% endmacro %}

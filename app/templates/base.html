@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+        <meta name="theme-color" content="#142e2a">
+        <meta name="htmx-config"
+              content='{"allowEval":false,"allowScriptTags":false,"historyCacheSize":0,"includeIndicatorStyles":false}'>
+        <title>{{ page_title or nav.get(page,'Record') }} · RMS</title>
+        <link rel="manifest" href="/static/manifest.webmanifest">
+        <link rel="stylesheet" href="/static/app.css?v=6">
+        <script defer src="/static/htmx.min.js"></script>
+        <script defer src="/static/app.js?v=6"></script>
+    </head>
+    <body hx-boost="true" hx-history="false">
+        <div class="app">
+            <aside class="side">
+                <div class="brand">
+                    RMS <small>RESTAURANT MANAGEMENT</small>
+                </div>
+                <nav class="nav">
+                    {% for k,v in nav.items() %}
+                        <a class="{{ 'active' if k==page }}" {% if k==page %}aria-current="page"{% endif %} href="{{ url_for('ui.workspace',page=k,day=day) }}">
+                            <span aria-hidden="true">{{ {'overview':'⌂','counters':'▦','money':'⇄','credits':'◷','stock':'▣','reports':'▤','settings':'⚙'}[k] }}</span> {{ v }}
+                        </a>
+                    {% endfor %}
+                </nav>
+                <div class="sidefoot">
+                    <a hx-boost="false" href="/search?end={{ day }}">Search all records</a>
+                    <form method="post" action="/logout">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button>Sign out</button>
+                    </form>
+                </div>
+            </aside>
+            <main class="main">
+                <div class="mobiletitle">
+                    RMS <span class="muted">/ Restaurant Management</span>
+                </div>
+                {% if breadcrumbs %}
+                    <nav class="breadcrumbs" aria-label="Breadcrumb">
+                        <ol>
+                            {% for label,href in breadcrumbs %}<li><a href="{{ href }}">{{ label }}</a></li>{% endfor %}
+                            <li aria-current="page">{{ breadcrumb_title|default(page_title) }}</li>
+                        </ol>
+                    </nav>
+                {% endif %}
+                <header class="top">
+                    <div>
+                        <div class="eyebrow">Restaurant operations</div>
+                        <h1>
+                            {% block title %}{{ page_title or nav.get(page,'Record') }}
+                            {% endblock %}
+                        </h1>
+                    </div>
+                    <div class="toolbar header-tools">
+                        <label class="theme-control">
+                            <span class="sr-only">Appearance</span>
+                            <select class="btn" data-theme-picker>
+                                <option value="hybrid">Hybrid</option>
+                                <option value="light">Light</option>
+                                <option value="dark">Dark</option>
+                            </select>
+                        </label>
+                        <button type="button" class="btn" data-dialog="activity" aria-haspopup="dialog"
+                                hx-get="{{ url_for('ui.activity') }}" hx-target="#activity-feed">
+                            <span aria-hidden="true">◷</span> Activity
+                        </button>
+                        {% if page and page != "settings" and show_operating_date|default(true) %}
+                            <form method="get">
+                                {% if args is defined %}
+                                    {% for name, value in args.items() if name in ('report','period','counter','account','direction','chart_days','chart_counter','chart_type','chart_series','q','party','method','item','category') %}
+                                        <input type="hidden" name="{{ name }}" value="{{ value }}">
+                                    {% endfor %}
+                                    {% if args.get('period')=='custom' %}
+                                        <input type="hidden" name="start" value="{{ lo }}">
+                                        <input type="hidden" name="end" value="{{ hi }}">
+                                    {% endif %}
+                                {% endif %}
+                                <input type="date"
+                                       name="day"
+                                       aria-label="Operating date"
+                                       value="{{ day }}"
+                                       class="search"
+                                       data-auto
+                                       required>
+                            </form>
+                        {% endif %}
+                    </div>
+                </header>
+                {% for m in get_flashed_messages() %}
+                    <p class="notice" role="status">{{ m }}</p>
+                {% endfor %}
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+        <nav class="mobilebar">
+            {% for k in ['overview','counters','money','stock'] %}
+                <a href="{{ url_for('ui.workspace',page=k,day=day) }}" class="{{'active' if page==k}}">{{ 'Cash & Bank' if k=='money' else nav[k] }}</a>
+            {% endfor %}
+            <button data-dialog="modules">More</button>
+        </nav>
+        <dialog id="activity" aria-labelledby="activity-title">
+            <div class="sectionhead">
+                <h2 id="activity-title">Recent activity</h2>
+                <button type="button" class="icon-button" data-dismiss aria-label="Close">×</button>
+            </div>
+            <div id="activity-feed" aria-live="polite">Loading recent activity…</div>
+            <a class="btn activity-link" href="{{ url_for('ui.workspace',page='reports',report='audit',period='custom',start='1900-01-01') }}">View audit history</a>
+        </dialog>
+        <dialog id="modules">
+            <h2>Navigate RMS</h2>
+            <div class="grid two">
+                {% for k,v in nav.items() %}
+                    <a class="btn" href="{{ url_for('ui.workspace',page=k,day=day) }}">{{ v }}</a>
+                {% endfor %}
+            </div>
+            <a class="btn" hx-boost="false"
+               href="/search?end={{ day }}">Search all records</a>
+            <form method="post" action="/logout" hx-boost="false">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn">Sign out</button>
+            </form>
+            <form method="dialog" hx-boost="false">
+                <button class="btn">Close</button>
+            </form>
+        </dialog>
+    </body>
+</html>

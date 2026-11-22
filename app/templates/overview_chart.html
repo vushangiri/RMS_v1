@@ -1,0 +1,42 @@
+<section class="card trend-card" data-chart data-points='{{ trend|tojson }}' data-chart-type="{{ chart.type }}" data-chart-series="{{ chart.series }}">
+    <div class="sectionhead">
+        <h2>Sales and expenses</h2>
+        <span class="tag">NPR</span>
+    </div>
+    <form class="chart-filters" method="get">
+        <input type="hidden" name="day" value="{{ day }}">
+        {{ select('Range','chart_days',[(7,'Last 7 days'),(14,'Last 14 days'),(30,'Last 30 days')],chart.days) }}
+        <label class="field">Counter
+            <select name="chart_counter">
+                <option value="0">All counters</option>
+                {% for c in counters %}
+                    <option value="{{ c.id }}" {{ 'selected' if chart.counter==c.id }}>{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        {{ select('Series','chart_series',[('both','Sales and expenses'),('sales','Sales'),('expenses','Expenses')],chart.series) }}
+        {{ select('Chart type','chart_type',[('bar','Grouped bar'),('line','Line'),('donut','Doughnut')],chart.type) }}
+        <button class="btn tiny">Apply chart filters</button>
+    </form>
+    <div class="chart-legend" aria-label="Chart legend">
+        {% if chart.series!='expenses' %}<span class="chart-sales">Sales</span>{% endif %}
+        {% if chart.series!='sales' %}<span class="chart-expenses">Expenses</span>{% endif %}
+    </div>
+    <div class="chart-stage">
+        <canvas tabindex="0" role="img" aria-label="Sales and expenses chart. Use the arrow keys to inspect values."></canvas>
+        <div class="chart-tooltip" role="status" hidden></div>
+    </div>
+    <details class="chart-data">
+        <summary>Chart data</summary>
+        <div class="tablewrap" data-paginate>
+            <table>
+                <thead><tr><th>Date</th>{% if chart.series!='expenses' %}<th>Sales (NPR)</th>{% endif %}{% if chart.series!='sales' %}<th>Expenses (NPR)</th>{% endif %}</tr></thead>
+                <tbody>
+                    {% for row in trend %}
+                        <tr><td>{{ row.date }}</td>{% if chart.series!='expenses' %}<td>{{ row.sales }}</td>{% endif %}{% if chart.series!='sales' %}<td>{{ row.expenses }}</td>{% endif %}</tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </details>
+</section>

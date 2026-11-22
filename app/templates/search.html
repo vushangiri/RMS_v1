@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% from 'form_help.html' import help %}
+{% block title %}Search{% endblock %}
+{% block content %}
+<form class="card toolbar" method="get" hx-boost="false">
+    <input type="hidden" name="end" value="{{day}}">
+    <label class="field grow">Search through {{day}}<input type="search" name="q" value="{{q}}" placeholder="Item, party, counter, reference, date or amount" autofocus></label>
+    <button class="btn primary">Search</button>
+    {{ help("global_search") }}
+</form>
+{% if matches %}<section class="card section"><h2>Catalogue and accounts</h2>
+    {% for m in matches %}
+    <div class="row stat"><a href="{% if m.kind=='Counter' %}{{url_for('ui.workspace',page='counters',counter=m.id,day=day)}}{% elif m.kind in ('customer','supplier') %}{{url_for('ui.workspace',page='credits',report='receivable' if m.kind=='customer' else 'payable',party=m.name,day=day)}}{% elif m.kind=='Bank' %}{{url_for('ui.workspace',page='money',report='bank',q=m.name,day=day)}}{% else %}{{url_for('ui.workspace',page='settings',q=m.name,day=day)}}{% endif %}">{{m.name}}</a><span class="tag">{{m.kind}}</span></div>
+    {% endfor %}
+</section>{% endif %}
+<section class="card section"><h2>Matching records</h2>
+    {% for r in records %}<div class="row stat"><a href="{{url_for('ui.record',e=r.record)}}">#{{r.record}} · {{r.kind}} {{r.reference}}</a><span>{{r.day}} · {{r.counter}}</span></div>
+    {% else %}<p>No matching records.</p>{% endfor %}
+    <div class="toolbar">{% if pg>1 %}<a href="{{url_for('ui.search',q=q,end=day,page=pg-1)}}">Previous</a>{% endif %}
+    {% if more %}<a href="{{url_for('ui.search',q=q,end=day,page=pg+1)}}">Next</a>{% endif %}</div>
+</section>
+{% endblock %}

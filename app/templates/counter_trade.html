@@ -1,0 +1,48 @@
+{% call form('bill','＋ Record new bill',open=args.get('add')=='bill',trigger=false) %}
+    <div class="formgrid">
+        {{ counter() }}{{ field('Supplier', 'party', list='supplier-names') }}{{ field('Bill reference', 'reference') }}
+    </div>
+    <h3>Items on this bill</h3>
+    <div class="lines stack">{{ itemrow() }}</div>
+    <template data-item-row>
+        {{ itemrow() }}
+    </template>
+    <div>
+        <button type="button" class="btn" data-add>＋ Add item</button>
+    </div>
+    <div class="formgrid">
+        {{ select('Payment', 'payment_mode', [('cash', 'Fully paid · cash'), ('bank', 'Fully paid · bank'), ('credit', 'Unpaid'), ('split', 'Partial / mixed payment')]) }}
+        <div data-split hidden>
+            {{ field('Cash paid', 'cash', 'number') }}{{ field('Bank paid', 'bank', 'number') }}
+        </div>
+        <div data-bank hidden>{{ account('Bank account','bank_id',true) }}</div>
+        <label class="field">
+            Bill image (optional)<input type="file" name="receipt" accept="image/jpeg,image/png">
+        </label>
+    </div>
+{% endcall %}
+{% call form('sale','＋ Record sales and quantities',open=args.get('add')=='sale',trigger=false) %}
+    <div class="formgrid">
+        {{ counter() }}{{ field('Cash sales', 'cash', 'number') }}
+    </div>
+    <div class="grid two sale-allocations">
+        {% for bank, title, label in [(true,'Bank sales','Add bank'),(false,'Credit sales','Add customer')] %}
+            <section class="soft" data-allocation>
+                <h3>{{ title }}</h3>
+                <div class="stack" data-allocation-rows></div>
+                <template>{{ allocation(bank) }}</template>
+                <button type="button" class="btn tiny" data-add-allocation>{{ label }}</button>
+            </section>
+        {% endfor %}
+    </div>
+    <h3>Quantities sold</h3>
+    <div class="lines stack">{{ itemrow(true) }}</div>
+    <template data-item-row>
+        {{ itemrow(true) }}
+    </template>
+    <div>
+        <button type="button" class="btn" data-add>＋ Add item</button>
+    </div>
+    <output data-total>
+    </output>
+{% endcall %}

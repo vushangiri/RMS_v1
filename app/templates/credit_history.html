@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{{ party.name }} · {{ kind|capitalize }} history{% endblock %}
+{% block content %}
+    <section class="card section">
+        <div class="sectionhead">
+            <h2>{{ 'Credit record #' ~ credit_id if credit_id else 'Account activity' }}</h2>
+            <div class="actions">
+                {% if credit_id %}
+                    <a class="btn tiny" href="{{ url_for('ui.credit_account',kind=kind,party=party.name,day=day) }}">Full account history</a>
+                {% endif %}
+                <a class="btn tiny" href="{{ url_for('ui.workspace',page='credits',report=kind,party=party.name,day=day) }}">View credit balances</a>
+            </div>
+        </div>
+        {% if history %}
+            <div class="tablewrap">
+                <table>
+                    <thead><tr><th>Date</th><th>Activity</th><th>Change (NPR)</th><th>Balance (NPR)</th><th>Credit record</th><th>Entry</th></tr></thead>
+                    <tbody>
+                        {% set labels = {'opening_credit':'Opening balance','sale':'Credit sale','bill':'Supplier bill','payment':'Payment','collection':'Collection','reversal':'Reversal'} %}
+                        {% for row in history %}
+                            <tr>
+                                <td>{{ row.day }}</td>
+                                <td>{{ labels[row.kind] }}</td>
+                                <td>{{ '{:+,.2f}'.format(row.change) }}</td>
+                                <td>{{ '{:,.2f}'.format(row.balance) }}</td>
+                                <td><a href="{{ url_for('ui.credit_account',kind=kind,party=party.name,credit=row.credit_record,day=day) }}">#{{ row.credit_record }}</a></td>
+                                <td><a href="{{ url_for('ui.record',e=row.record) }}">#{{ row.record }}</a></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="empty">No activity for this account.</p>
+        {% endif %}
+        {% if pg>1 or more %}
+        <nav class="toolbar table-pager" aria-label="Credit history pages">
+            {% if pg>1 %}
+                <a href="{{ url_for('ui.credit_account',kind=kind,party=party.name,credit=credit_id or none,day=day,page=pg-1) }}">Previous</a>
+            {% endif %}
+            <span>Page {{ pg }}</span>
+            {% if more %}
+                <a href="{{ url_for('ui.credit_account',kind=kind,party=party.name,credit=credit_id or none,day=day,page=pg+1) }}">Next</a>
+            {% endif %}
+        </nav>
+        {% endif %}
+    </section>
+{% endblock %}

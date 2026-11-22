@@ -1,0 +1,75 @@
+name: rms-ledger
+
+x-env: &environment
+  DATABASE_URL: postgresql+psycopg://rms:${POSTGRES_PASSWORD:?Run scripts/configure.sh}@db:5432/${RMS_DB_NAME:-rms}
+  SECRET_KEY: ${SECRET_KEY:?Run scripts/configure.sh}
+  COOKIE_SECURE: ${COOKIE_SECURE:-1}
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: rms
+      POSTGRES_DB: rms
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run scripts/configure.sh}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rms -d rms"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+  migrate:
+    build: .
+    environment: *environment
+    command: ["alembic","upgrade","head"]
+    depends_on:
+      db: {condition: service_healthy}
+  app:
+    build: .
+    environment: *environment
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: ["CMD","python","-c","import urllib.request,json; assert json.load(urllib.request.urlopen('http://localhost:8000/health'))['ready']"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+  backup:
+    image: postgres:16-alpine
+    entrypoint: ["sh", "/usr/local/bin/rms-backup"]
+    command: ["schedule"]
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: rms
+      PGDATABASE: ${RMS_DB_NAME:-rms}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Run scripts/configure.sh}
+      PGCONNECT_TIMEOUT: 10
+      RMS_BACKUP_LOCATION: ${RMS_BACKUP_DIR:-./backups}
+    volumes:
+      - "${RMS_BACKUP_DIR:-./backups}:/backups"
+      - ./scripts/backup-service.sh:/usr/local/bin/rms-backup:ro
+    depends_on:
+      db: {condition: service_healthy}
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: ["CMD", "sh", "/usr/local/bin/rms-backup", "health"]
+      interval: 1m
+      timeout: 10s
+      start_period: 5m
+      retries: 3
+    restart: unless-stopped
+  proxy:
+    image: nginx:stable-alpine
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "127.0.0.1:${RMS_PORT:-8090}:80"
+    depends_on:
+      app: {condition: service_healthy}
+    restart: unless-stopped
+volumes:
+  pgdata:

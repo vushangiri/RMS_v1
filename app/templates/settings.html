@@ -1,0 +1,84 @@
+{% from 'settings_forms.html' import variant_row,bank_actions with context %}
+{% set report_actions %}
+    {% call form('configuration','Add product','new_item',primary=true) %}
+        <div class="formgrid">
+            {{ field('Product name','name','text',true,list='product-names',maxlength=120) }}
+            {{ field('Category','category','text',true,list='categories',maxlength=80) }}
+        </div>
+        <div class="stack" data-variant-rows>{{ variant_row() }}</div>
+        <template data-variant-template>{{ variant_row() }}</template>
+        <button type="button" class="btn" data-add-variant>Add variation</button>
+    {% endcall %}
+{% endset %}
+<div class="settings-layout section">
+    <section class="card">
+        <div class="sectionhead">
+            <h2>Counters</h2>
+            {% call form('configuration','Add counter','new_counter') %}
+                {{ field('Counter name','name','text',true,maxlength=80) }}
+            {% endcall %}
+        </div>
+        <div class="tablewrap" data-paginate>
+            <table>
+                <thead><tr><th>Name</th><th>Status</th></tr></thead>
+                <tbody>
+                    {% for c in counters %}
+                        <tr><td>{{ c.name }}</td><td>{{ 'Main' if c.main else ('Active' if c.active else 'Inactive') }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="toolbar settings-actions">
+            {% call form('configuration','Rename counter','rename') %}
+                <div class="formgrid">
+                    {{ counter() }}{{ field('New name','name','text',true,maxlength=80) }}
+                </div>
+            {% endcall %}
+            {% if counters|rejectattr('main')|list %}
+                {% call form('configuration','Change counter status','toggle_counter') %}
+                    <label class="field">
+                        Counter
+                        <select name="counter_id" required>
+                            <option value="">Choose counter</option>
+                            {% for c in counters if not c.main %}
+                                <option value="{{ c.id }}">{{ c.name }} · {{ 'Active' if c.active else 'Inactive' }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                {% endcall %}
+            {% endif %}
+        </div>
+    </section>
+    <section class="card">
+        <div class="sectionhead">
+            <h2>Bank accounts</h2>
+            {% call form('configuration','Add bank account','new_bank') %}
+                {{ field('Account name','name','text',true,maxlength=100) }}
+            {% endcall %}
+        </div>
+        {% if settings_banks %}
+            <ul class="settings-list">
+                {% for bank in settings_banks %}
+                    <li class="row">
+                        <span>{{ bank.name }} {% if not bank.active %}<small class="tag">Archived</small>{% endif %}</span>
+                        {{ bank_actions(bank) }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="muted">No bank accounts configured.</p>
+        {% endif %}
+    </section>
+    <section class="card">
+        <div class="sectionhead">
+            <h2>Physical stock counts</h2>
+            <span class="tag {{ 'green' if physical }}">{{ 'On' if physical else 'Off' }}</span>
+        </div>
+        <p class="muted">Estimated stock continues to update when physical counts are off.</p>
+        {% call form('configuration','Turn counts ' ~ ('off' if physical else 'on'),'physical') %}
+            <p>Confirm switching physical stock counts {{ 'off' if physical else 'on' }}.</p>
+        {% endcall %}
+    </section>
+</div>
+
+{% include "report.html" %}
