@@ -3,7 +3,10 @@
     <head>
         <meta name="viewport" content="width=device-width,initial-scale=1">
         <title>Sign in · RMS</title>
+        <meta name="theme-color" content="#142e2a">
+        <link rel="manifest" href="/static/manifest.webmanifest">
         <link rel="stylesheet" href="/static/app.css?v=6">
+        <script defer src="/static/pwa.js?v=1"></script>
     </head>
     <body class="sign">
         <main class="card">
@@ -22,6 +25,7 @@
                 </label>
                 <button class="btn primary">Sign in</button>
             </form>
+            <button type="button" class="btn section" data-install-rms hidden>Install RMS</button>
         </main>
     </body>
 </html>

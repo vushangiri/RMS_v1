@@ -1,5 +1,5 @@
-const CACHE='rms-ledger-shell-v6';
-const ASSETS=['/static/app.css?v=6','/static/app.js?v=6','/static/icon.svg','/static/offline.html'];
+const CACHE='rms-ledger-shell-v7';
+const ASSETS=['/static/app.css?v=6','/static/app.js?v=7','/static/pwa.js?v=1','/static/icon.svg','/static/offline.html'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('rms-ledger-shell-') && k!==CACHE).map(k=>caches.delete(k))))));
 self.addEventListener('message',event=>{if(event.data==='ACTIVATE')self.skipWaiting()});

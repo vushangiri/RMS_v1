@@ -260,7 +260,6 @@ document.addEventListener('submit', async event => {
   button.disabled = false;
   delete form.dataset.busy;
 });
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
 
 function initTablePagination() {
   for (const wrap of document.querySelectorAll('[data-paginate]:not([data-paginated])')) {

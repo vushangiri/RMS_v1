@@ -98,3 +98,8 @@ To reproduce the automated suite, follow DEVELOPMENT.md. To rehearse recovery wi
 * A forced dump failure for a missing database published no archive and left no partial file. A manual dump returned the usable host path.
 * The scheduled archive restored into a separate Compose project with a fresh PostgreSQL volume. The restored Alembic revision, seven ledger events, operator, closing snapshot, receipt checksum, balanced postings, and total drawer cash matched the test source. A second restore to the same database was rejected.
 * The live local backup service generated its first daily archive. The app health endpoint remained ready.
+
+## Desktop PWA installation · 22 November 2026
+
+* All 32 tests passed in 38.08 seconds on isolated PostgreSQL. The desktop Chromium test checked the manifest and service worker on the login page and exercised the Install RMS button with a simulated browser prompt. The mobile workflow verified the static-only cache.
+* The rebuilt local app returned ready through the proxy. Chromium reported zero installability errors on the loopback HTTP URL. A separate non-loopback HTTP origin remained outside the secure context and hid the native install button. Installation in an end user's desktop browser still requires their confirmation.

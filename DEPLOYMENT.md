@@ -50,6 +50,12 @@ docker compose port proxy 80
 
 The last command should show `0.0.0.0:8090`. Then browse to `http://VPS_IP:8090`. If it still times out, check the provider firewall and use the VPS’s public IP. To return to tunnel-only access, remove `RMS_BIND_ADDRESS` from `.env` and recreate the proxy.
 
+## Install RMS on a desktop
+
+Open RMS in Chrome or Edge using HTTPS or the loopback URL from the SSH tunnel above. Choose **Install RMS** when the browser offers it, then confirm. RMS opens in its own window. If the button is unavailable, look for the install icon in the address bar or use the browser’s **Install page as app** or **Install this site as an app** menu option.
+
+A plain HTTP VPS IP does not support the native PWA install prompt. Chrome and Edge can still create an app window from the site using their browser menus. For full PWA support without a domain, install from `http://127.0.0.1:8090` over the SSH tunnel and keep that tunnel running while using the installed app. Ledger access and writes require a connection to the server.
+
 ## Host Nginx and TLS
 
 When switching to HTTPS, remove any direct-access `RMS_BIND_ADDRESS` override and recreate the proxy. Set `COOKIE_SECURE=1` in `.env` and apply it with `docker compose up -d --no-deps app` before using the public URL.

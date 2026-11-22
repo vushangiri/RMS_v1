@@ -29,6 +29,24 @@ def test_daily_workflow(app, engine, width, height):
             errors = []
             page.on("pageerror", lambda err: errors.append(str(err)))
             page.goto(base + "/")
+            if width == 1440:
+                expect(page.locator('link[rel="manifest"]')).to_have_attribute(
+                    "href", "/static/manifest.webmanifest"
+                )
+                manifest = page.request.get(base + "/static/manifest.webmanifest").json()
+                assert manifest["id"] == manifest["start_url"] == "/"
+                assert manifest["display"] == "standalone"
+                page.wait_for_function("async () => Boolean(await navigator.serviceWorker.ready)")
+                install = page.get_by_role("button", name="Install RMS")
+                page.evaluate("""() => {
+                    const event = new Event('beforeinstallprompt', {cancelable: true});
+                    event.prompt = async () => { window.rmsTestInstallPrompted = true; };
+                    window.dispatchEvent(event);
+                }""")
+                expect(install).to_be_visible()
+                install.click()
+                assert page.evaluate("window.rmsTestInstallPrompted")
+                expect(install).not_to_be_visible()
             page.get_by_label("Username").fill("tester")
             page.get_by_label("Password").fill("test-password-1234")
             page.get_by_role("button", name="Sign in").click()
@@ -285,7 +303,7 @@ def test_daily_workflow(app, engine, width, height):
                 page.evaluate("navigator.serviceWorker.ready")
                 page.reload()
                 keys = page.evaluate(
-                    "async()=>{const c=await caches.open('rms-ledger-shell-v6');return (await c.keys()).map(r=>new URL(r.url).pathname)}"
+                    "async()=>{const c=await caches.open('rms-ledger-shell-v7');return (await c.keys()).map(r=>new URL(r.url).pathname)}"
                 )
                 assert keys and all(path.startswith("/static/") for path in keys)
                 page.get_by_role("button", name="More", exact=True).click()

@@ -10,7 +10,8 @@
         <link rel="manifest" href="/static/manifest.webmanifest">
         <link rel="stylesheet" href="/static/app.css?v=6">
         <script defer src="/static/htmx.min.js"></script>
-        <script defer src="/static/app.js?v=6"></script>
+        <script defer src="/static/app.js?v=7"></script>
+        <script defer src="/static/pwa.js?v=1"></script>
     </head>
     <body hx-boost="true" hx-history="false">
         <div class="app">
@@ -54,6 +55,7 @@
                         </h1>
                     </div>
                     <div class="toolbar header-tools">
+                        <button type="button" class="btn" data-install-rms hidden>Install RMS</button>
                         <label class="theme-control">
                             <span class="sr-only">Appearance</span>
                             <select class="btn" data-theme-picker>
