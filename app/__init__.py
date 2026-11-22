@@ -10,10 +10,11 @@ from sqlalchemy import create_engine
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from .db import first, lock, value
-from .ledger import need
+from .ledger import need, operating_timezone
 
 
 def create_app():
+    operating_timezone()
     app = Flask(__name__)
     app.jinja_env.trim_blocks = True
     app.jinja_env.lstrip_blocks = True

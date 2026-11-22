@@ -2,10 +2,11 @@
 
 import hashlib
 import json
+import os
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from uuid import UUID, uuid5
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from .db import balance, first, lock, rows, stock, value
 
@@ -32,8 +33,16 @@ def number(raw: object, scale: int = 2, minimum: Decimal | int | None = 0) -> De
         raise Invalid("Enter a valid number.") from exc
 
 
+def operating_timezone() -> ZoneInfo:
+    name = os.getenv("RMS_TIMEZONE", "Asia/Kathmandu")
+    try:
+        return ZoneInfo(name)
+    except (ValueError, ZoneInfoNotFoundError) as exc:
+        raise Invalid(f"Invalid RMS_TIMEZONE {name!r}. Set an IANA name such as Asia/Kathmandu.") from exc
+
+
 def today() -> date:
-    return datetime.now(ZoneInfo("Asia/Kathmandu")).date()
+    return datetime.now(operating_timezone()).date()
 
 
 def sysacc(c, kind):

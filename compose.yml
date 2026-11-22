@@ -4,6 +4,7 @@ x-env: &environment
   DATABASE_URL: postgresql+psycopg://rms:${POSTGRES_PASSWORD:?Run scripts/configure.sh}@db:5432/${RMS_DB_NAME:-rms}
   SECRET_KEY: ${SECRET_KEY:?Run scripts/configure.sh}
   COOKIE_SECURE: ${COOKIE_SECURE:-1}
+  RMS_TIMEZONE: ${RMS_TIMEZONE-Asia/Kathmandu}
 
 services:
   db:

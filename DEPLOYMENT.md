@@ -18,6 +18,18 @@ sh scripts/backup.sh
 
 Expected health response is `{"ready":true}`. A completed migration container has exit code 0. Keep the generated .env file private. Use generated hexadecimal database passwords because the connection URL embeds this value. Change RMS_PORT before startup if another application owns 8090, then use the same remote port in the commands below.
 
+## Operating timezone
+
+RMS defaults to Nepal time (`Asia/Kathmandu`, UTC+05:45). To use a different timezone, set `RMS_TIMEZONE` in the project’s `.env` to an IANA timezone name such as `Asia/Singapore`. Deployments outside Compose can set the same variable in the app process environment.
+
+After deploying this version, apply a timezone change with:
+
+```sh
+docker compose up -d --no-deps --wait app
+```
+
+The setting determines the current operating date for entry forms, posting validation and report defaults. Stored operating dates and closed snapshots retain their original dates.
+
 ## HTTP testing without a domain
 
 Set `COOKIE_SECURE=0` in the VPS project’s `.env` for HTTP testing. If RMS is already running, apply the change with `docker compose up -d --no-deps app`. On the VPS itself, open `http://127.0.0.1:8090` or use the health check above.

@@ -17,7 +17,7 @@
 | Quantity sold | Sum of base-unit sale lines by item. No per-item sale price or revenue is inferred. |
 | Estimated stock | Opening stock plus tracked purchases and signed adjustments, less tracked sales. A physical count rebaselines the live estimate. Each tracked catalogue variation has its own restaurant-wide balance. |
 | Stock variance | Physical count minus the estimate at observation. New stock counts entered in RMS apply the difference in the same transaction. Historical observation-only counts can still be approved separately. |
-| Report dates | Nepal local calendar day, Monday–Sunday week, calendar month/year, or inclusive custom dates. Outstanding debt and stock balances use history through the end date. |
+| Report dates | Local calendar day in the deployment's operating timezone (Nepal by default), Monday–Sunday week, calendar month/year, or inclusive custom dates. Outstanding debt and stock balances use history through the end date. |
 
 ## Entry decisions
 
