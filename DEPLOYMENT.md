@@ -2,10 +2,11 @@
 
 ## Fresh project
 
-Install Docker Engine and the Compose v2 plugin, and use a root-owned or operator-owned directory for the project. The archive assumes HTTPS at the host reverse proxy. PostgreSQL and Gunicorn have no published ports. The Compose proxy listens only on loopback by default.
+Install Docker Engine and the Compose v2 plugin, and use a root-owned or operator-owned directory for the project. PostgreSQL and Gunicorn have no published ports. The Compose proxy listens on loopback. For initial testing, use HTTP over an SSH tunnel. You can add a domain and HTTPS later.
 
 ```sh
 sh scripts/configure.sh
+# For HTTP testing, set COOKIE_SECURE=0 in .env before starting Compose.
 docker compose config --quiet
 docker compose up -d --build
 docker compose ps -a
@@ -15,9 +16,43 @@ docker compose exec app flask --app wsgi:app init-admin
 sh scripts/backup.sh
 ```
 
-Expected health response is `{"ready":true}`. A completed migration container has exit code 0. Keep the generated .env file private. Use generated hexadecimal database passwords because the connection URL embeds this value. Keep COOKIE_SECURE=1 on the VPS. Change RMS_PORT before startup if another application owns 8090.
+Expected health response is `{"ready":true}`. A completed migration container has exit code 0. Keep the generated .env file private. Use generated hexadecimal database passwords because the connection URL embeds this value. Change RMS_PORT before startup if another application owns 8090, then use the same remote port in the commands below.
+
+## HTTP testing without a domain
+
+Set `COOKIE_SECURE=0` in the VPS project’s `.env` for HTTP testing. If RMS is already running, apply the change with `docker compose up -d --no-deps app`. On the VPS itself, open `http://127.0.0.1:8090` or use the health check above.
+
+From your own computer, open an SSH tunnel using the VPS IP address. Keep the SSH session running while using RMS.
+
+```sh
+ssh -N -o ExitOnForwardFailure=yes -L 127.0.0.1:8090:127.0.0.1:8090 your-user@VPS_IP
+```
+
+Open [http://127.0.0.1:8090](http://127.0.0.1:8090) on your computer and sign in. If your computer already uses port 8090, change the first port in the tunnel command to 8091 and open `http://127.0.0.1:8091`. SSH encrypts the connection to the VPS. Port 8090 stays on loopback, so this setup needs neither a public HTTP port nor a domain.
+
+### Direct IP access for a restricted test
+
+For direct browser access, set these values in the VPS project’s `.env`. Restrict inbound TCP 8090 to your own public IP in the VPS provider’s firewall before publishing the port. Plain HTTP sends credentials and ledger data without encryption, so use the SSH tunnel for real data.
+
+```dotenv
+RMS_BIND_ADDRESS=0.0.0.0
+RMS_PORT=8090
+COOKIE_SECURE=0
+```
+
+Apply the changes from the VPS project directory.
+
+```sh
+docker compose up -d --no-deps --wait app
+docker compose up -d --no-deps --force-recreate --wait proxy
+docker compose port proxy 80
+```
+
+The last command should show `0.0.0.0:8090`. Then browse to `http://VPS_IP:8090`. If it still times out, check the provider firewall and use the VPS’s public IP. To return to tunnel-only access, remove `RMS_BIND_ADDRESS` from `.env` and recreate the proxy.
 
 ## Host Nginx and TLS
+
+When switching to HTTPS, remove any direct-access `RMS_BIND_ADDRESS` override and recreate the proxy. Set `COOKIE_SECURE=1` in `.env` and apply it with `docker compose up -d --no-deps app` before using the public URL.
 
 Point your domain at the server. Add this site on the existing host Nginx, substituting the domain and the selected loopback port. The container's own proxy configuration is already included.
 

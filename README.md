@@ -13,7 +13,7 @@ docker compose ps -a
 docker compose exec app flask --app wsgi:app init-admin
 ```
 
-The migration service exits successfully before Gunicorn starts. The administrator command prompts for credentials and runs once. Only the bundled Nginx listener is published, at 127.0.0.1:8090. Use the HTTPS setup in [DEPLOYMENT.md](DEPLOYMENT.md) for your VPS. For local HTTP development only, change `COOKIE_SECURE=0` in `.env` and recreate the app with `docker compose up -d`. Open http://localhost:8090.
+The migration service exits successfully before Gunicorn starts. The administrator command prompts for credentials and runs once. Only the bundled Nginx listener is published, at 127.0.0.1:8090. For HTTP testing, set `COOKIE_SECURE=0` in `.env` before startup and open http://127.0.0.1:8090. For VPS testing without a domain, follow the SSH tunnel instructions in [DEPLOYMENT.md](DEPLOYMENT.md).
 
 This distribution uses a **fresh schema** and a separate default Compose project named `rms-ledger`. Keep an earlier RMS database and its volumes intact. There is no importer from the earlier schema or the browser prototype.
 
